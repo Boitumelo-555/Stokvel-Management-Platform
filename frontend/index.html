@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stokvel Management</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Stokvel Management Platform</h1>
+
+  <div class="create-group">
+    <h2>Create Group</h2>
+    <input id="groupName" placeholder="Enter group name">
+    <button onclick="createGroup()">Create Group</button>
+  </div>
+
+  <div class="join-group">
+    <h2>Join Group</h2>
+    <input id="joinGroupName" placeholder="Enter group name to join">
+    <input id="memberName" placeholder="Your name">
+    <button onclick="joinGroup()">Join Group</button>
+  </div>
+
+  <div class="groups-list">
+    <h2>All Groups</h2>
+    <ul id="groups"></ul>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
