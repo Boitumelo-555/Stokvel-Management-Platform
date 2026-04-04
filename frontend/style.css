@@ -1,0 +1,36 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background-color: #f7f7f7;
+  color: #333;
+}
+
+h1 {
+  color: #2a7ae2;
+}
+
+input {
+  padding: 5px;
+  margin: 5px;
+}
+
+button {
+  padding: 5px 10px;
+  background-color: #2a7ae2;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #1d5bbf;
+}
+
+.groups-list ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.groups-list li {
+  padding: 5px 0;
+}
