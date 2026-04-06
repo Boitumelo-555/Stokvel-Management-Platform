@@ -125,7 +125,7 @@ describe("PATCH /groups/:id - Update a group", () => {
 });
 
 // ── UAT 5: Delete a group ─────────────────────────────────────────────────────
-// Story: As an Admin, I want to archive a group so that inactive groups are removed.
+// Story: As an Admin, I want to archive a group so that inactive groups are removed 
 describe("DELETE /groups/:id - Archive a group", () => {
   let groupId;
 
