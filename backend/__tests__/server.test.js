@@ -153,3 +153,117 @@ describe("DELETE /groups/:id - Archive a group", () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+
+// ── UAT 6: Save a pending invite ─────────────────────────────────────────────
+// Story: As an Admin, I want to save a pending invite so that I can track
+// who has been invited and their assigned role.
+describe("POST /invites - Save a pending invite", () => {
+  test("GIVEN valid details, WHEN I POST /invites, THEN invite is saved as pending", async () => {
+    const res = await request(app)
+      .post("/invites")
+      .send({
+        email: "thabo@email.com",
+        name: "Thabo Mokoena",
+        role: "member",
+        group_id: null
+      });
+
+    expect(res.statusCode).toBe(201);
+    expect(res.body.email).toBe("thabo@email.com");
+    expect(res.body.status).toBe("pending");
+    expect(res.body.role).toBe("member");
+  });
+
+  test("GIVEN no email, WHEN I POST /invites, THEN I receive a 400 error", async () => {
+    const res = await request(app)
+      .post("/invites")
+      .send({ name: "Thabo", role: "member" });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test("GIVEN an invalid email, WHEN I POST /invites, THEN I receive a 400 error", async () => {
+    const res = await request(app)
+      .post("/invites")
+      .send({ email: "notanemail", name: "Thabo", role: "member" });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test("GIVEN no name, WHEN I POST /invites, THEN I receive a 400 error", async () => {
+    const res = await request(app)
+      .post("/invites")
+      .send({ email: "thabo2@email.com", role: "member" });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test("GIVEN an invalid role, WHEN I POST /invites, THEN I receive a 400 error", async () => {
+    const res = await request(app)
+      .post("/invites")
+      .send({ email: "thabo3@email.com", name: "Thabo", role: "superuser" });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test("GIVEN a duplicate email, WHEN I POST /invites, THEN I receive a 409 error", async () => {
+    await request(app)
+      .post("/invites")
+      .send({ email: "duplicate@email.com", name: "Thabo", role: "member" });
+
+    const res = await request(app)
+      .post("/invites")
+      .send({ email: "duplicate@email.com", name: "Thabo", role: "member" });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.error).toBeDefined();
+  });
+});
+
+// ── UAT 7: Get all invites ────────────────────────────────────────────────────
+// Story: As an Admin, I want to view all pending invites so that I can
+// track who has been invited.
+describe("GET /invites - List all invites", () => {
+  test("GIVEN invites exist, WHEN I GET /invites, THEN I receive a list", async () => {
+    const res = await request(app).get("/invites");
+
+    expect(res.statusCode).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+// ── UAT 8: Cancel an invite ───────────────────────────────────────────────────
+// Story: As an Admin, I want to cancel an invite so that
+// uninvited people cannot join.
+describe("DELETE /invites/:id - Cancel an invite", () => {
+  let inviteId;
+
+  beforeEach(async () => {
+    const res = await request(app)
+      .post("/invites")
+      .send({
+        email: `cancel-${Date.now()}@email.com`,
+        name: "Cancel Test",
+        role: "member"
+      });
+    inviteId = res.body.id;
+  });
+
+  test("GIVEN a valid invite id, WHEN I DELETE /invites/:id, THEN it is cancelled", async () => {
+    const res = await request(app).delete(`/invites/${inviteId}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.message).toBe("Invite cancelled successfully");
+  });
+
+  test("GIVEN an invalid invite id, WHEN I DELETE /invites/:id, THEN I receive a 404", async () => {
+    const res = await request(app).delete("/invites/9999");
+
+    expect(res.statusCode).toBe(404);
+  });
+});

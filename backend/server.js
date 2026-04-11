@@ -12,6 +12,9 @@ app.use(express.json());
 const groupRoutes = require("./routes/groups");
 app.use("/groups", groupRoutes);
 
+const inviteRoutes = require("./routes/invites");
+app.use("/invites", inviteRoutes);
+
 app.get("/", (req, res) => {
   res.json({ status: "Stokvel API is running" });
 });
