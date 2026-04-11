@@ -1,0 +1,127 @@
+/* Stokvel Management Platform - Layout Styles */
+/* App Shell, Sidebar, Main Content, Grids */
+
+/* ==================== APP SHELL ==================== */
+.app-layout {
+  display: block;
+  min-height: 100vh;
+}
+
+/* ==================== SIDEBAR ==================== */
+.sidebar {
+  background: var(--white);
+  border-right: 1px solid var(--slate-200);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  width: 260px;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--slate-200);
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-logo h2 {
+  font-size: 1.25rem;
+  color: var(--forest-green);
+}
+
+.sidebar-nav { flex: 1; }
+
+.nav-section { margin-bottom: 1.5rem; }
+
+.nav-section-title {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--slate-400);
+  margin-bottom: 0.75rem;
+  padding-left: 12px;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  color: var(--slate-600);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: var(--transition);
+  margin-bottom: 4px;
+}
+
+.nav-link:hover { background: var(--stone-50); color: var(--slate-900); }
+.nav-link.active { background: var(--emerald-50); color: var(--forest-green); }
+
+.nav-link svg { width: 20px; height: 20px; opacity: 0.8; }
+
+.sidebar-user {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--slate-200);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--emerald-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--forest-green);
+}
+
+.user-info { flex: 1; }
+.user-name  { font-weight: 600; font-size: 0.9rem; color: var(--slate-900); }
+.user-role  { font-size: 0.75rem; color: var(--slate-500); }
+
+/* ==================== MAIN CONTENT ==================== */
+.main-content {
+  margin-left: 260px;
+  padding: 2rem 2.5rem;
+  min-height: 100vh;
+}
+
+.page-header { margin-bottom: 2rem; }
+.page-header h1 { margin-bottom: 0.5rem; }
+.page-header p  { color: var(--slate-500); }
+
+/* ==================== GRIDS ==================== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 1024px) {
+  .app-layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .main-content { margin-left: 0; }
+}
+
+@media (max-width: 768px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .main-content { padding: 1.5rem; }
+}
