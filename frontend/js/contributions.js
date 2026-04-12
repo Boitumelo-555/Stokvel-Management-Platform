@@ -1,9 +1,10 @@
 // ==================== CONTRIBUTIONS ====================
+import { getMyContributions } from './supabase-client.js';
+import { formatCurrency, formatDate, showToast } from './utils.js';
 
-function initContributions() {
-  renderContributionsTable();
+export async function initContributions() {
+  await renderContributionsTable();
 
-  // Filter functionality
   const filterSelect = document.getElementById('contribution-filter');
   if (filterSelect) {
     filterSelect.addEventListener('change', () => {
@@ -12,44 +13,66 @@ function initContributions() {
   }
 }
 
-function renderContributionsTable(filter = 'all') {
+async function renderContributionsTable(filter = 'all') {
   const tableBody = document.getElementById('contributions-table-body');
   if (!tableBody) return;
 
-  let filteredContributions = mockContributions;
-  if (filter !== 'all') {
-    filteredContributions = mockContributions.filter(c => c.status.toLowerCase() === filter);
+  tableBody.innerHTML = `<tr><td colspan="5" class="text-center" style="padding:2rem;">Loading...</td></tr>`;
+
+  let contributions = [];
+  try {
+    const raw = await getMyContributions();
+    contributions = raw.map(c => ({
+      id: c.id,
+      date: c.due_date,
+      group: c.groups?.name || '—',
+      amount: c.amount,
+      status: c.status.charAt(0).toUpperCase() + c.status.slice(1),
+    }));
+  } catch (err) {
+    console.warn('Supabase fetch failed, using mock data:', err.message);
+    contributions = [
+      { id: 'c001', date: '2026-01-15', amount: 500, status: 'Completed', group: 'Soweto Savings Club' },
+      { id: 'c002', date: '2025-12-15', amount: 500, status: 'Completed', group: 'Soweto Savings Club' },
+      { id: 'c003', date: '2025-11-15', amount: 500, status: 'Completed', group: 'Soweto Savings Club' },
+      { id: 'c004', date: '2025-10-15', amount: 500, status: 'Pending',   group: 'Soweto Savings Club' },
+      { id: 'c005', date: '2025-09-15', amount: 500, status: 'Late',      group: 'Soweto Savings Club' },
+    ];
   }
 
-  if (filteredContributions.length === 0) {
+  let filtered = contributions;
+  if (filter !== 'all') {
+    filtered = contributions.filter(c => c.status.toLowerCase() === filter);
+  }
+
+  if (filtered.length === 0) {
     tableBody.innerHTML = `
-      <tr>
-        <td colspan="5" class="text-center" style="padding: 2rem;">
-          No contributions found
-        </td>
-      </tr>
+      <tr><td colspan="5" class="text-center" style="padding:2rem;">No contributions found</td></tr>
     `;
     return;
   }
 
-  // Calculate totals
-  const totalAmount = filteredContributions.reduce((sum, c) => sum + c.amount, 0);
-  document.getElementById('total-contributions').textContent = formatCurrency(totalAmount);
-  document.getElementById('contribution-count').textContent = filteredContributions.length;
+  const totalAmount = filtered.reduce((sum, c) => sum + c.amount, 0);
+  const totalEl = document.getElementById('total-contributions');
+  const countEl = document.getElementById('contribution-count');
+  if (totalEl) totalEl.textContent = formatCurrency(totalAmount);
+  if (countEl) countEl.textContent = filtered.length;
 
-  tableBody.innerHTML = filteredContributions.map(contribution => `
-    <tr data-testid="contribution-row-${contribution.id}">
-      <td>${formatDate(contribution.date)}</td>
-      <td>${contribution.group}</td>
-      <td class="amount-cell">${formatCurrency(contribution.amount)}</td>
+  window._contributions = filtered;
+
+  tableBody.innerHTML = filtered.map(c => `
+    <tr data-testid="contribution-row-${c.id}">
+      <td>${formatDate(c.date)}</td>
+      <td>${c.group}</td>
+      <td class="amount-cell">${formatCurrency(c.amount)}</td>
       <td>
         <mark class="badge ${
-          contribution.status === 'Completed' ? 'badge-success' :
-          contribution.status === 'Pending' ? 'badge-warning' : 'badge-error'
-        }">${contribution.status}</mark>
+          c.status === 'Completed' ? 'badge-success' :
+          c.status === 'Pending'   ? 'badge-warning' : 'badge-error'
+        }">${c.status}</mark>
       </td>
       <td>
-        <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${contribution.id}')">
+        <button class="btn btn-ghost btn-sm" onclick="viewReceipt('${c.id}')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
@@ -61,9 +84,7 @@ function renderContributionsTable(filter = 'all') {
   `).join('');
 }
 
-function viewReceipt(contributionId) {
-  const contribution = mockContributions.find(c => c.id === contributionId);
-  if (contribution) {
-    showToast(`Receipt for ${formatCurrency(contribution.amount)} on ${formatDate(contribution.date)}`);
-  }
-}
+window.viewReceipt = function(contributionId) {
+  const c = (window._contributions || []).find(x => x.id === contributionId);
+  if (c) showToast(`Receipt: ${formatCurrency(c.amount)} on ${formatDate(c.date)}`);
+};
