@@ -1,25 +1,27 @@
 // ==================== INITIALIZE ====================
-// Entry point — routes to the correct page initializer based on current HTML file.
-// Load order for HTML pages (replace the single app.js script tag with these, in order):
-//   <script src="js/data.js"></script>
-//   <script src="js/utils.js"></script>
-//   <script src="js/auth.js"></script>
-//   <script src="js/admin-dashboard.js"></script>
-//   <script src="js/groups.js"></script>
-//   <script src="js/invites.js"></script>
-//   <script src="js/contributions.js"></script>
-//   <script src="js/dashboards.js"></script>
-//   <script src="js/main.js"></script>
+// Single ES module entry point. Each HTML page loads only this file:
+//   <script type="module" src="js/main.js"></script>
+
+import { checkAuth, initLoginPage, logout } from './auth.js';
+import { initDashboard }         from './admin-dashboard.js';
+import { initTreasurerDashboard, initMemberDashboard } from './dashboards.js';
+import { initCreateGroup }       from './groups.js';
+import { initInviteMembers }     from './invites.js';
+import { initContributions }     from './contributions.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
-  // Check auth for protected pages
-  if (currentPage !== 'index.html') {
+  // Wire logout button via event listener (works with ES modules, unlike onclick="")
+  const logoutBtn = document.querySelector('[data-testid="logout-btn"]');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => logout());
+  }
+
+  if (currentPage !== 'index.html' && currentPage !== '') {
     checkAuth();
   }
 
-  // Initialize page-specific functionality
   switch (currentPage) {
     case 'index.html':
     case '':
