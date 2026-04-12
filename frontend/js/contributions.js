@@ -30,10 +30,11 @@ function renderContributionsTable(filter = 'all') {
       </tr>
     `;
     return;
+    
   }
 
   // Calculate totals
-  const totalAmount = filteredContributions.reduce((sum, c) => sum + c.amount, 0);
+  const totalAmount =filteredContributions.reduce((sum, c) => sum + c.amount, 0);
   document.getElementById('total-contributions').textContent = formatCurrency(totalAmount);
   document.getElementById('contribution-count').textContent = filteredContributions.length;
 
