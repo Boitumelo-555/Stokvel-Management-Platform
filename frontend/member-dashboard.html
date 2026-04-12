@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Member Dashboard - Stokvel Management</title>
+  <link rel="stylesheet" href="base.css">
+  <link rel="stylesheet" href="layout.css">
+  <link rel="stylesheet" href="components.css">
+  <link rel="stylesheet" href="pages.css">
+</head>
+<body>
+  <section class="app-layout" data-testid="member-dashboard">
+
+    <!-- Sidebar -->
+    <aside class="sidebar" data-testid="sidebar">
+      <header class="sidebar-logo">
+        <figure class="logo-circles" style="width: 36px; height: 36px;">
+          <i class="logo-circle logo-circle-green" style="width: 24px; height: 24px;"></i>
+          <i class="logo-circle logo-circle-blue" style="width: 24px; height: 24px;"></i>
+        </figure>
+        <h2>Stokvel</h2>
+      </header>
+
+      <nav class="sidebar-nav">
+        <section class="nav-section">
+          <p class="nav-section-title">Member Menu</p>
+          <a href="member-dashboard.html" class="nav-link active" data-testid="nav-member-dashboard">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="9"></rect>
+              <rect x="14" y="3" width="7" height="5"></rect>
+              <rect x="14" y="12" width="7" height="9"></rect>
+              <rect x="3" y="16" width="7" height="5"></rect>
+            </svg>
+            Dashboard
+          </a>
+          <a href="contributions.html" class="nav-link" data-testid="nav-my-contributions">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            My Contributions
+          </a>
+          <a href="#" class="nav-link" data-testid="nav-my-groups">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+            My Groups
+          </a>
+          <a href="#" class="nav-link" data-testid="nav-payout-schedule">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Payout Schedule
+          </a>
+        </section>
+      </nav>
+
+      <footer class="sidebar-user" data-testid="user-info">
+        <abbr class="user-avatar" title="User initials">SN</abbr>
+        <section class="user-info">
+          <strong class="user-name">Sipho Ndlovu</strong>
+          <em class="user-role">Member</em>
+        </section>
+        <button class="btn btn-ghost btn-sm" onclick="logout()" data-testid="logout-btn" title="Logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </footer>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="page-header">
+        <h1>Welcome, Sipho!</h1>
+        <p>Here's your stokvel membership overview and upcoming payments.</p>
+      </header>
+
+      <!-- Stats Grid -->
+      <section class="stats-grid" data-testid="member-stats">
+        <article class="stat-card" data-testid="stat-total-contributed">
+          <figure class="stat-card-icon green">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </figure>
+          <strong class="stat-value">R 4,000</strong>
+          <p class="stat-label">Total Contributed</p>
+        </article>
+        <article class="stat-card" data-testid="stat-next-payment">
+          <figure class="stat-card-icon amber">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </figure>
+          <strong class="stat-value">15 Feb</strong>
+          <p class="stat-label">Next Payment Due</p>
+        </article>
+        <article class="stat-card" data-testid="stat-my-payout">
+          <figure class="stat-card-icon blue">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+              <line x1="1" y1="10" x2="23" y2="10"></line>
+            </svg>
+          </figure>
+          <strong class="stat-value">March</strong>
+          <p class="stat-label">My Payout Month</p>
+        </article>
+        <article class="stat-card" data-testid="stat-groups-count">
+          <figure class="stat-card-icon green">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </figure>
+          <strong class="stat-value">2</strong>
+          <p class="stat-label">Active Groups</p>
+        </article>
+      </section>
+
+      <!-- My Groups -->
+      <article class="card" style="margin-bottom: 1.5rem;">
+        <header class="card-header">
+          <h3 class="card-title">My Stokvel Groups</h3>
+        </header>
+        <section class="groups-grid" data-testid="member-groups">
+          <article class="group-card" data-testid="group-soweto">
+            <header class="group-card-header">
+              <section>
+                <h3 class="group-name">Soweto Savings Club</h3>
+                <mark class="badge badge-success">Active Member</mark>
+              </section>
+            </header>
+            <ul class="group-meta">
+              <li class="group-meta-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                </svg>
+                12 members
+              </li>
+              <li class="group-meta-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                R 500 / Monthly
+              </li>
+            </ul>
+            <footer style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--slate-200);">
+              <p style="font-size: 0.85rem; color: var(--slate-600);">
+                Your position: <strong style="color: var(--forest-green);">#5 of 12</strong> (Payout: March 2026)
+              </p>
+            </footer>
+          </article>
+
+          <article class="group-card" data-testid="group-family">
+            <header class="group-card-header">
+              <section>
+                <h3 class="group-name">Family Unity Stokvel</h3>
+                <mark class="badge badge-success">Active Member</mark>
+              </section>
+            </header>
+            <ul class="group-meta">
+              <li class="group-meta-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                </svg>
+                8 members
+              </li>
+              <li class="group-meta-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+                R 1,000 / Monthly
+              </li>
+            </ul>
+            <footer style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--slate-200);">
+              <p style="font-size: 0.85rem; color: var(--slate-600);">
+                Your position: <strong style="color: var(--forest-green);">#3 of 8</strong> (Payout: May 2026)
+              </p>
+            </footer>
+          </article>
+        </section>
+      </article>
+
+      <!-- Recent Contributions -->
+      <article class="card">
+        <header class="card-header">
+          <h3 class="card-title">Recent Contributions</h3>
+          <a href="contributions.html" class="btn btn-outline btn-sm">View All</a>
+        </header>
+        <section class="table-container">
+          <table data-testid="recent-contributions-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Group</th>
+                <th style="text-align: right;">Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>15 Jan 2026</td>
+                <td>Soweto Savings Club</td>
+                <td class="amount-cell">R 500</td>
+                <td><mark class="badge badge-success">Completed</mark></td>
+              </tr>
+              <tr>
+                <td>15 Jan 2026</td>
+                <td>Family Unity Stokvel</td>
+                <td class="amount-cell">R 1,000</td>
+                <td><mark class="badge badge-success">Completed</mark></td>
+              </tr>
+              <tr>
+                <td>15 Dec 2025</td>
+                <td>Soweto Savings Club</td>
+                <td class="amount-cell">R 500</td>
+                <td><mark class="badge badge-success">Completed</mark></td>
+              </tr>
+              <tr>
+                <td>15 Dec 2025</td>
+                <td>Family Unity Stokvel</td>
+                <td class="amount-cell">R 1,000</td>
+                <td><mark class="badge badge-success">Completed</mark></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </article>
+
+      <!-- Upcoming Payment Alert -->
+      <aside class="alert alert-success" style="margin-top: 1.5rem; max-width: 600px; background: var(--amber-100); border-color: #fde68a;" data-testid="payment-reminder">
+        <svg class="alert-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <p style="color: #92400e; margin: 0;">
+          <strong>Payment Reminder:</strong> Your next contribution of R 1,500 (R 500 + R 1,000) is due on 15 February 2026.
+        </p>
+      </aside>
+    </main>
+
+  </section>
+
+  <output id="toast-container" class="toast-container"></o>
+  <script src="js/data.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/admin-dashboard.js"></script>
+  <script src="js/groups.js"></script>
+  <script src="js/invites.js"></script>
+  <script src="js/contributions.js"></script>
+  <script src="js/dashboards.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
