@@ -1,19 +1,29 @@
 // ==================== INVITE MEMBERS ====================
+import { sendInvitation, getGroupInvitations, getMyGroups } from './supabase-client.js';
+import { formatDate, showToast } from './utils.js';
 
-async function initInviteMembers() {
-  await loadInvitesFromAPI();
+let _groups = [];
+
+export async function initInviteMembers() {
+  await loadGroups();
+  await renderInviteList();
 
   const form = document.getElementById('invite-form');
-
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const emailInput = document.getElementById('invite-email');
-      const email = emailInput.value.trim();
+      const emailInput  = document.getElementById('invite-email');
+      const groupSelect = document.getElementById('invite-group');
+      const email       = emailInput.value.trim();
+      const groupId     = groupSelect ? groupSelect.value : null;
 
       if (!email || !email.includes('@')) {
         showToast('Please enter a valid email address', 'error');
+        return;
+      }
+      if (!groupId) {
+        showToast('Please select a group to invite to', 'error');
         return;
       }
 
@@ -22,30 +32,29 @@ async function initInviteMembers() {
       submitBtn.innerHTML = 'Sending...';
 
       try {
-        const res = await fetch('http://localhost:3000/invites', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: email,
-            name: email.split('@')[0],
-            role: 'member',
-            group_id: null
-          })
-        });
+        // 1. Save invitation record to Supabase
+        const invite = await sendInvitation(groupId, email);
 
-        const data = await res.json();
-
-        if (!res.ok) {
-          showToast(data.error || 'Failed to send invite', 'error');
-          return;
+        // 2. Trigger email via Supabase Edge Function (send-invite)
+        //    The edge function uses the invitation token to email the recipient.
+        //    Deploy the edge function from: backend/supabase/functions/send-invite/
+        try {
+          const { supabase } = await import('./supabase-client.js');
+          await supabase.functions.invoke('send-invite', {
+            body: { invitationId: invite.id, email, groupId },
+          });
+          showToast(`Invitation sent to ${email}`);
+        } catch (fnErr) {
+          // Edge function not deployed yet — record saved, email not sent
+          console.warn('send-invite edge function not available:', fnErr.message);
+          showToast(`Invitation recorded for ${email} (email delivery pending edge function setup)`, 'warning');
         }
 
-        showToast(`Invitation sent to ${email}`);
         emailInput.value = '';
-        await loadInvitesFromAPI();
-
+        await renderInviteList(groupId);
       } catch (err) {
-        showToast('Could not connect to server — is the backend running?', 'error');
+        console.error('sendInvitation error:', err);
+        showToast('Failed to send invitation: ' + err.message, 'error');
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = `
@@ -60,65 +69,51 @@ async function initInviteMembers() {
   }
 }
 
-async function loadInvitesFromAPI() {
+async function loadGroups() {
+  const groupSelect = document.getElementById('invite-group');
+  if (!groupSelect) return;
+
   try {
-    const res = await fetch('http://localhost:3000/invites');
-    const invites = await res.json();
-    renderInviteListFromAPI(invites);
+    _groups = await getMyGroups();
+    groupSelect.innerHTML = `<option value="">Select a group…</option>` +
+      _groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
   } catch (err) {
-    console.warn('Backend not available, falling back to mock data');
-    renderInviteList();
+    console.warn('Could not load groups:', err.message);
+    groupSelect.innerHTML = `<option value="">No groups available</option>`;
   }
 }
 
-function renderInviteListFromAPI(invites) {
+async function renderInviteList(groupId) {
   const inviteList = document.getElementById('invite-list');
   if (!inviteList) return;
 
-  if (invites.length === 0) {
-    inviteList.innerHTML = `
-      <section class="empty-state">
-        <p>No invitations sent yet</p>
-      </section>
-    `;
+  const gid = groupId || (_groups.length > 0 ? _groups[0].id : null);
+  if (!gid) {
+    inviteList.innerHTML = `<section class="empty-state"><p>Create a group first to see invitations.</p></section>`;
     return;
   }
 
-  inviteList.innerHTML = invites.map(invite => `
-    <article class="invite-item" data-testid="invite-item-${invite.id}">
-      <section>
-        <p class="invite-email">${invite.email}</p>
-        <small class="invite-date">Sent on ${formatDate(invite.created_at)}</small>
-      </section>
-      <mark class="badge ${invite.status === 'accepted' ? 'badge-success' : 'badge-warning'}">
-        ${invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
-      </mark>
-    </article>
-  `).join('');
-}
+  inviteList.innerHTML = `<p style="color:var(--slate-400);font-size:.9rem;">Loading invitations…</p>`;
 
-function renderInviteList() {
-  const inviteList = document.getElementById('invite-list');
-  if (!inviteList) return;
-
-  if (mockInvites.length === 0) {
-    inviteList.innerHTML = `
-      <section class="empty-state">
-        <p>No invitations sent yet</p>
-      </section>
-    `;
-    return;
+  try {
+    const invites = await getGroupInvitations(gid);
+    if (invites.length === 0) {
+      inviteList.innerHTML = `<section class="empty-state"><p>No invitations sent yet</p></section>`;
+      return;
+    }
+    inviteList.innerHTML = invites.map(invite => `
+      <article class="invite-item" data-testid="invite-item-${invite.id}">
+        <section>
+          <p class="invite-email">${invite.email}</p>
+          <small class="invite-date">Sent on ${formatDate(invite.created_at?.split('T')[0] || invite.sentAt)}</small>
+        </section>
+        <mark class="badge ${invite.status === 'accepted' ? 'badge-success' : 'badge-warning'}">
+          ${invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
+        </mark>
+      </article>
+    `).join('');
+  } catch (err) {
+    console.warn('Could not load invitations:', err.message);
+    inviteList.innerHTML = `<section class="empty-state"><p>Could not load invitations.</p></section>`;
   }
-
-  inviteList.innerHTML = mockInvites.map(invite => `
-    <article class="invite-item" data-testid="invite-item-${invite.id}">
-      <section>
-        <p class="invite-email">${invite.email}</p>
-        <small class="invite-date">Sent on ${formatDate(invite.sentAt)}</small>
-      </section>
-      <mark class="badge ${invite.status === 'accepted' ? 'badge-success' : 'badge-warning'}">
-        ${invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}
-      </mark>
-    </article>
-  `).join('');
 }
