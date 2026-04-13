@@ -9,14 +9,11 @@ import { initCreateGroup }       from './groups.js';
 import { initInviteMembers }     from './invites.js';
 import { initContributions }     from './contributions.js';
 
+// Expose logout globally so HTML onclick="logout()" works
+window.logout = logout;
+
 document.addEventListener('DOMContentLoaded', () => {
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
-
-  // Wire logout button via event listener (works with ES modules, unlike onclick="")
-  const logoutBtn = document.querySelector('[data-testid="logout-btn"]');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => logout());
-  }
 
   if (currentPage !== 'index.html' && currentPage !== '') {
     checkAuth();

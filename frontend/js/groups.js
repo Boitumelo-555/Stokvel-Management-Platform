@@ -4,20 +4,20 @@ import { showToast } from './utils.js';
 
 export function initCreateGroup() {
   const form = document.getElementById('create-group-form');
-  const submitBtn = document.getElementById('create-group-btn');
+  if (!form) return;
 
-  if (!form || !submitBtn) {
-    console.error('Create group form or button not found');
-    return;
-  }
+  const submitBtn = form.querySelector('button[type="submit"]');
 
-  submitBtn.addEventListener('click', async () => {
-    const name               = document.getElementById('groupName')?.value.trim();
-    const contributionAmount = parseFloat(document.getElementById('contribution')?.value);
-    const frequency          = document.getElementById('frequency')?.value;
-    const startDate          = document.getElementById('startDate')?.value || null;
-    const description        = document.getElementById('description')?.value.trim() || '';
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
+    const name               = form.querySelector('#groupName').value.trim();
+    const contributionAmount = parseFloat(form.querySelector('#contribution').value);
+    const frequency          = form.querySelector('#frequency').value;
+    const startDate          = form.querySelector('#startDate')?.value || null;
+    const description        = form.querySelector('#description')?.value.trim() || '';
+
+    // Client-side validation
     if (!name) {
       showToast('Please enter a group name', 'error');
       return;
@@ -31,6 +31,8 @@ export function initCreateGroup() {
       return;
     }
 
+    // Normalise frequency to lowercase to match DB CHECK constraint
+    // DB accepts: 'weekly' | 'bi-weekly' | 'monthly'
     const frequencyNormalised = frequency.toLowerCase();
 
     submitBtn.disabled = true;
@@ -42,14 +44,16 @@ export function initCreateGroup() {
         description,
         contributionAmount,
         frequency: frequencyNormalised,
-        maxMembers: 20,
+        maxMembers: 20,   // sensible default — form has no such field
         startDate,
       });
       showToast('Group created successfully!');
       setTimeout(() => { window.location.href = 'admin-dashboard.html'; }, 800);
     } catch (err) {
       console.error('createGroup error:', err);
-      showToast('Error: ' + (err?.message || 'Unknown error'), 'error');
+      // Surface the real error so it's never silently swallowed
+      const msg = err?.message || 'Unknown error creating group';
+      showToast('Error: ' + msg, 'error');
       submitBtn.disabled = false;
       submitBtn.innerHTML = `
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

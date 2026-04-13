@@ -32,24 +32,8 @@ export async function initInviteMembers() {
       submitBtn.innerHTML = 'Sending...';
 
       try {
-        // 1. Save invitation record to Supabase
-        const invite = await sendInvitation(groupId, email);
-
-        // 2. Trigger email via Supabase Edge Function (send-invite)
-        //    The edge function uses the invitation token to email the recipient.
-        //    Deploy the edge function from: backend/supabase/functions/send-invite/
-        try {
-          const { supabase } = await import('./supabase-client.js');
-          await supabase.functions.invoke('send-invite', {
-            body: { invitationId: invite.id, email, groupId },
-          });
-          showToast(`Invitation sent to ${email}`);
-        } catch (fnErr) {
-          // Edge function not deployed yet — record saved, email not sent
-          console.warn('send-invite edge function not available:', fnErr.message);
-          showToast(`Invitation recorded for ${email} (email delivery pending edge function setup)`, 'warning');
-        }
-
+        await sendInvitation(groupId, email);
+        showToast(`Invitation sent to ${email}`);
         emailInput.value = '';
         await renderInviteList(groupId);
       } catch (err) {
@@ -87,6 +71,7 @@ async function renderInviteList(groupId) {
   const inviteList = document.getElementById('invite-list');
   if (!inviteList) return;
 
+  // Use the first group if none specified
   const gid = groupId || (_groups.length > 0 ? _groups[0].id : null);
   if (!gid) {
     inviteList.innerHTML = `<section class="empty-state"><p>Create a group first to see invitations.</p></section>`;
