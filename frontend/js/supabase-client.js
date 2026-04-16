@@ -2,7 +2,7 @@
 // supabase-client.js
 // ============================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 const SUPABASE_URL     = 'https://wzclnjbzouqietbordxi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Y2xuamJ6b3VxaWV0Ym9yZHhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5Mjc4OTEsImV4cCI6MjA5MTUwMzg5MX0.g4OqfuhERKGq0Ttdb-PinPMVnOdvNucTTfJtM_cXZZk';
@@ -30,32 +30,19 @@ export async function signOut() {
  * The localStorage fallback covers demo/manual logins where no
  * real OAuth token exists, so auth.uid() would be null.
  */
-export async function getCurrentUser() { 
-  console.log("1. getCurrentUser started checking...");
-  
-  // First, check the browser's quick memory (Local Storage)
-  const stored = localStorage.getItem('stokvel_user'); 
-  if (stored) { 
-    try { 
-      const parsed = JSON.parse(stored); 
-      if (parsed?.id) {
-        console.log("2. Found user in LocalStorage!", parsed.name);
-        return { id: parsed.id, email: parsed.email }; 
-      }
-    } catch (e) {
-      console.log("Error reading local user:", e);
-    } 
-  } 
+export async function getCurrentUser() {
+  // Check LocalStorage first - this is what you have in your screenshot
+  const stored = localStorage.getItem('stokvel_user');
+  if (stored) {
+    const parsed = JSON.parse(stored);
+    if (parsed && parsed.id) {
+      return { id: parsed.id, email: parsed.email };
+    }
+  }
 
-  console.log("3. No local user found, checking Supabase server...");
-  try { 
-    const { data: { user } } = await supabase.auth.getUser(); 
-    if (user) return user; 
-  } catch (_) {
-    console.log("4. Supabase server check failed.");
-  } 
-
-  return null; 
+  // Fallback to Supabase if LocalStorage is empty
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
 }
 
 export async function getMyRole() {
@@ -93,32 +80,50 @@ export async function getProfile(userId) {
  *   ('weekly', 'bi-weekly', 'monthly')
  * NOTE: 'start_date' column does NOT exist in the groups table — omitted.
  */
-export async function createGroup(groupData) { 
-  console.log("--- STARTING INSERT ---"); 
-  const user = await getCurrentUser(); 
-  
-  const cleanData = { 
-    name: String(groupData.name), 
-    description: String(groupData.description || ''), 
-    contribution_amount: Number(groupData.contributionAmount),
-    frequency: String(groupData.frequency).toLowerCase(),
-    max_members: 20, 
-    created_by: user.id 
-  };
+export async function createGroup(groupData) {
+  console.log("--- DATABASE INSERT STARTING ---");
 
-  // We use .insert() and we DON'T use .select()
-  // This is the "fastest" way to send data
-  const { error } = await supabase
-    .from('groups')
-    .insert([cleanData]);
+  try {
+    // 1. Get User ID
+    const stored = JSON.parse(localStorage.getItem('stokvel_user'));
+    const userId = stored ? stored.id : null;
 
-  if (error) {
+    if (!userId) {
+      throw new Error("No User ID found. Please log in again.");
+    }
+
+    // 2. Prepare Data (Careful with types!)
+    const cleanData = {
+      name: String(groupData.name || 'Unnamed Group'),
+      description: String(groupData.description || ''),
+      contribution_amount: Number(groupData.contributionAmount || 0),
+      frequency: String(groupData.frequency || 'monthly').toLowerCase(),
+      max_members: 20,
+      created_by: userId
+    };
+
+    console.log("Data being sent to Supabase:", cleanData);
+
+    // 3. The Actual Database Call
+    const { data, error } = await supabase
+      .from('groups')
+      .insert([cleanData])
+      .select(); // Adding .select() helps some Supabase versions confirm the save
+
+    if (error) {
     console.error("DATABASE ERROR:", error.message);
-    throw error;
+    // This allows the button to be clicked again if there's an error
+    throw error; 
   }
 
   console.log("--- SUCCESS! ---");
-  return { success: true };
+  window.location.href = 'admin-dashboard.html';
+  return { success: true, data };
+
+  } catch (err) {
+    console.error("CRITICAL ERROR IN createGroup:", err.message);
+    throw err;
+  }
 }
 
 /**
@@ -163,26 +168,44 @@ export async function getMyGroups() {
 // ==================== INVITATIONS ====================
 
 export async function sendInvitation(groupId, email, role = 'member') {
+  console.log('=== sendInvitation called ===');
+  console.log('groupId:', groupId);
+  console.log('email:', email);
+  console.log('role:', role);
+  
   const user = await getCurrentUser();
   if (!user) throw new Error('Not logged in');
-
+  
+  console.log('Current user:', user.id);
+  
   // Generate a unique token for the invite link
   const token = crypto.randomUUID();
-
+  console.log('Generated token:', token);
+  
+  const invitationData = {
+    group_id: groupId,
+    email,
+    invited_by: user.id,
+    status: 'pending',
+    token,
+    role,
+  };
+  
+  console.log('Attempting to insert:', invitationData);
+  
   const { data, error } = await supabase
     .from('invitations')
-    .insert({
-      group_id:   groupId,
-      email,
-      invited_by: user.id,
-      status:     'pending',
-      token,
-      role,
-    })
+    .insert(invitationData)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('Supabase insert error:', error);
+    console.error('Error details:', error.message, error.details, error.hint);
+    throw error;
+  }
+  
+  console.log('Invitation created successfully:', data);
   return data;
 }
 
