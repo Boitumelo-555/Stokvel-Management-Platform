@@ -1,4 +1,4 @@
-// ==================== INVITE MEMBERS ====================
+// ==================== INVITE MEMBERS WITH ROLE ====================
 import { sendInvitation, getGroupInvitations, getMyGroups } from './supabase-client.js';
 import { formatDate, showToast } from './utils.js';
 
@@ -13,10 +13,13 @@ export async function initInviteMembers() {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const emailInput  = document.getElementById('invite-email');
+      const emailInput = document.getElementById('invite-email');
       const groupSelect = document.getElementById('invite-group');
-      const email       = emailInput.value.trim();
-      const groupId     = groupSelect ? groupSelect.value : null;
+      const roleSelect = document.getElementById('invite-role');
+      
+      const email = emailInput.value.trim();
+      const groupId = groupSelect ? groupSelect.value : null;
+      const role = roleSelect ? roleSelect.value : 'member';
 
       if (!email || !email.includes('@')) {
         showToast('Please enter a valid email address', 'error');
@@ -32,9 +35,24 @@ export async function initInviteMembers() {
       submitBtn.innerHTML = 'Sending...';
 
       try {
-        await sendInvitation(groupId, email);
-        showToast(`Invitation sent to ${email}`);
+        // 1. Save invitation record to Supabase with the selected role
+        const invite = await sendInvitation(groupId, email, role); // <-- role added
+
+        // 2. Trigger email via Supabase Edge Function (send-invite)
+        try {
+          const { supabase } = await import('./supabase-client.js');
+          await supabase.functions.invoke('send-invite', {
+            body: { invitationId: invite.id, email, groupId, role },
+          });
+          showToast(`Invitation sent to ${email} as ${role}`);
+        } catch (fnErr) {
+          console.warn('send-invite edge function not available:', fnErr.message);
+          showToast(`Invitation recorded for ${email} (role: ${role}) — email pending`, 'warning');
+        }
+
         emailInput.value = '';
+        // Optionally reset role to default
+        if (roleSelect) roleSelect.value = 'member';
         await renderInviteList(groupId);
       } catch (err) {
         console.error('sendInvitation error:', err);
@@ -71,7 +89,6 @@ async function renderInviteList(groupId) {
   const inviteList = document.getElementById('invite-list');
   if (!inviteList) return;
 
-  // Use the first group if none specified
   const gid = groupId || (_groups.length > 0 ? _groups[0].id : null);
   if (!gid) {
     inviteList.innerHTML = `<section class="empty-state"><p>Create a group first to see invitations.</p></section>`;
@@ -91,6 +108,8 @@ async function renderInviteList(groupId) {
         <section>
           <p class="invite-email">${invite.email}</p>
           <small class="invite-date">Sent on ${formatDate(invite.created_at?.split('T')[0] || invite.sentAt)}</small>
+          <br/>
+          <small class="invite-role" style="color:var(--slate-500);">Role: <strong>${invite.role || 'member'}</strong></small>
         </section>
         <mark class="badge ${invite.status === 'accepted' ? 'badge-success' : 'badge-warning'}">
           ${invite.status.charAt(0).toUpperCase() + invite.status.slice(1)}

@@ -162,14 +162,26 @@ export async function getMyGroups() {
 
 // ==================== INVITATIONS ====================
 
-export async function sendInvitation(groupId, email) {
+export async function sendInvitation(groupId, email, role = 'member') {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not logged in');
+
+  // Generate a unique token for the invite link
+  const token = crypto.randomUUID();
+
   const { data, error } = await supabase
     .from('invitations')
-    .insert({ group_id: groupId, email, invited_by: user.id })
+    .insert({
+      group_id:   groupId,
+      email,
+      invited_by: user.id,
+      status:     'pending',
+      token,
+      role,
+    })
     .select()
     .single();
+
   if (error) throw error;
   return data;
 }
