@@ -1,67 +1,64 @@
 // ==================== CREATE GROUP ====================
-import { createGroup } from './supabase-client.js';
-import { showToast } from './utils.js';
+import { createGroup } from './supabase-client.js'; 
+import { showToast } from './utils.js'; 
+ 
+export function initCreateGroup() { 
+  console.log("--- initCreateGroup function has STARTED ---"); 
+  const form = document.getElementById('create-group-form'); 
+  
+  if (!form) {
+    console.log("--- ERROR: Form NOT found in HTML! ---");
+    return;
+  } 
 
-export function initCreateGroup() {
-  const form = document.getElementById('create-group-form');
-  if (!form) return;
-
-  const submitBtn = form.querySelector('button[type="submit"]');
-
-  form.addEventListener('submit', async (e) => {
+  const submitBtn = form.querySelector('button[type="submit"]'); 
+ 
+  form.addEventListener('submit', async (e) => { 
     e.preventDefault();
+    console.log("Step 2: The button was clicked!");
+ 
+    // Collect the data from the form
+    const name = form.querySelector('#groupName').value.trim(); 
+    const contributionAmount = parseFloat(form.querySelector('#contribution').value); 
+    const frequency = form.querySelector('#frequency').value; 
+    const description = form.querySelector('#description')?.value.trim() || ''; 
+    const startDate = form.querySelector('#startDate')?.value || null;
 
-    const name               = form.querySelector('#groupName').value.trim();
-    const contributionAmount = parseFloat(form.querySelector('#contribution').value);
-    const frequency          = form.querySelector('#frequency').value;
-    const startDate          = form.querySelector('#startDate')?.value || null;
-    const description        = form.querySelector('#description')?.value.trim() || '';
+    console.log("Step 3: Preparing to send to Supabase...");
 
-    // Client-side validation
-    if (!name) {
-      showToast('Please enter a group name', 'error');
-      return;
+    // Disable button so they don't click twice
+    if (submitBtn) {
+      submitBtn.disabled = true; 
+      submitBtn.textContent = 'Creating...'; 
     }
-    if (!contributionAmount || contributionAmount < 100) {
-      showToast('Minimum contribution is R100', 'error');
-      return;
-    }
-    if (!frequency) {
-      showToast('Please select a contribution frequency', 'error');
-      return;
-    }
+ 
+    try { 
+      await createGroup({ 
+        name, 
+        description, 
+        contributionAmount, 
+        frequency, 
+        maxMembers: 20,
+        startDate
+      }); 
 
-    // Normalise frequency to lowercase to match DB CHECK constraint
-    // DB accepts: 'weekly' | 'bi-weekly' | 'monthly'
-    const frequencyNormalised = frequency.toLowerCase();
+      console.log("Step 4: SUCCESS!");
+      showToast('Group created successfully!'); 
+      
+      // Give the database 1 second to breathe, then go to dashboard
+      setTimeout(() => { 
+        window.location.href = 'admin-dashboard.html'; 
+      }, 1000); 
 
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating…';
-
-    try {
-      await createGroup({
-        name,
-        description,
-        contributionAmount,
-        frequency: frequencyNormalised,
-        maxMembers: 20,   // sensible default — form has no such field
-        startDate,
-      });
-      showToast('Group created successfully!');
-      setTimeout(() => { window.location.href = 'admin-dashboard.html'; }, 800);
-    } catch (err) {
-      console.error('createGroup error:', err);
-      // Surface the real error so it's never silently swallowed
-      const msg = err?.message || 'Unknown error creating group';
-      showToast('Error: ' + msg, 'error');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
-        Create Group
-      `;
+    } catch (err) { 
+      console.log("Step 4: FAILED with error:", err.message);
+      showToast('Error: ' + err.message, 'error'); 
+      
+      // Reset button so user can try again
+      if (submitBtn) {
+        submitBtn.disabled = false; 
+        submitBtn.textContent = 'Create Group';
+      }
     }
   });
 }

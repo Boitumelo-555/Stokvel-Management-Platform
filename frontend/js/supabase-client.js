@@ -30,20 +30,32 @@ export async function signOut() {
  * The localStorage fallback covers demo/manual logins where no
  * real OAuth token exists, so auth.uid() would be null.
  */
-export async function getCurrentUser() {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) return user;
-  } catch (_) {}
+export async function getCurrentUser() { 
+  console.log("1. getCurrentUser started checking...");
+  
+  // First, check the browser's quick memory (Local Storage)
+  const stored = localStorage.getItem('stokvel_user'); 
+  if (stored) { 
+    try { 
+      const parsed = JSON.parse(stored); 
+      if (parsed?.id) {
+        console.log("2. Found user in LocalStorage!", parsed.name);
+        return { id: parsed.id, email: parsed.email }; 
+      }
+    } catch (e) {
+      console.log("Error reading local user:", e);
+    } 
+  } 
 
-  const stored = localStorage.getItem('stokvel_user');
-  if (stored) {
-    try {
-      const parsed = JSON.parse(stored);
-      if (parsed?.id) return { id: parsed.id, email: parsed.email };
-    } catch (_) {}
-  }
-  return null;
+  console.log("3. No local user found, checking Supabase server...");
+  try { 
+    const { data: { user } } = await supabase.auth.getUser(); 
+    if (user) return user; 
+  } catch (_) {
+    console.log("4. Supabase server check failed.");
+  } 
+
+  return null; 
 }
 
 export async function getMyRole() {
@@ -81,34 +93,32 @@ export async function getProfile(userId) {
  *   ('weekly', 'bi-weekly', 'monthly')
  * NOTE: 'start_date' column does NOT exist in the groups table — omitted.
  */
-export async function createGroup({ name, description, contributionAmount, frequency, maxMembers }) {
-  const user = await getCurrentUser();
-  if (!user) throw new Error('You must be logged in to create a group');
+export async function createGroup(groupData) { 
+  console.log("--- STARTING INSERT ---"); 
+  const user = await getCurrentUser(); 
+  
+  const cleanData = { 
+    name: String(groupData.name), 
+    description: String(groupData.description || ''), 
+    contribution_amount: Number(groupData.contributionAmount),
+    frequency: String(groupData.frequency).toLowerCase(),
+    max_members: 20, 
+    created_by: user.id 
+  };
 
-  const { data, error } = await supabase
+  // We use .insert() and we DON'T use .select()
+  // This is the "fastest" way to send data
+  const { error } = await supabase
     .from('groups')
-    .insert({
-      name,
-      description: description || '',
-      contribution_amount: contributionAmount,
-      frequency,                     // already lowercased by groups.js
-      max_members: maxMembers || 20,
-      created_by: user.id,
-    })
-    .select()
-    .single();
+    .insert([cleanData]);
 
-  if (error) throw error;
+  if (error) {
+    console.error("DATABASE ERROR:", error.message);
+    throw error;
+  }
 
-  // Auto-add the creator as a group member
-  const { error: memberError } = await supabase
-    .from('group_members')
-    .insert({ group_id: data.id, user_id: user.id });
-
-  // Don't throw on member insert failure — group was still created
-  if (memberError) console.warn('Could not add creator to group_members:', memberError.message);
-
-  return data;
+  console.log("--- SUCCESS! ---");
+  return { success: true };
 }
 
 /**

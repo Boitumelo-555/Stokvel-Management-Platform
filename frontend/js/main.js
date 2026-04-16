@@ -1,7 +1,7 @@
 // ==================== INITIALIZE ====================
 // Single ES module entry point. Each HTML page loads only this file:
 //   <script type="module" src="js/main.js"></script>
-
+console.log("THE SWITCHBOARD IS AWAKE!");
 import { checkAuth, initLoginPage, logout } from './auth.js';
 import { initDashboard }         from './admin-dashboard.js';
 import { initTreasurerDashboard, initMemberDashboard } from './dashboards.js';
@@ -14,6 +14,7 @@ window.logout = logout;
 
 document.addEventListener('DOMContentLoaded', () => {
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+  console.log("Current Page detected as:", currentPage); // ADD THIS LINE
 
   if (currentPage !== 'index.html' && currentPage !== '') {
     checkAuth();
@@ -21,25 +22,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   switch (currentPage) {
     case 'index.html':
+    case 'index':
     case '':
       initLoginPage();
       break;
     case 'admin-dashboard.html':
+    case 'admin-dashboard':
       initDashboard();
       break;
     case 'treasurer-dashboard.html':
+    case 'treasurer-dashboard':
       initTreasurerDashboard();
       break;
     case 'member-dashboard.html':
+    case 'member-dashboard':
       initMemberDashboard();
       break;
     case 'create-group.html':
+    case 'create-group':
       initCreateGroup();
       break;
     case 'invite-members.html':
+    case 'invite-members': 
       initInviteMembers();
       break;
     case 'contributions.html':
+    case 'contributions':
       initContributions();
       break;
   }
