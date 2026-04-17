@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   switch (currentPage) {
     case 'index.html':
-    case 'index':
     case '':
       initLoginPage();
       break;
@@ -31,11 +30,9 @@ document.addEventListener('DOMContentLoaded', () => {
       initDashboard();
       break;
     case 'treasurer-dashboard.html':
-    case 'treasurer-dashboard':
       initTreasurerDashboard();
       break;
     case 'member-dashboard.html':
-    case 'member-dashboard':
       initMemberDashboard();
       break;
     case 'create-group.html':
@@ -47,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
       initInviteMembers();
       break;
     case 'contributions.html':
-    case 'contributions':
       initContributions();
       break;
   }
