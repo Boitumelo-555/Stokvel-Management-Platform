@@ -2,9 +2,9 @@
 // supabase-client.js
 // ============================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const SUPABASE_URL     = 'https://wzclnjbzouqietbordxi.supabase.co';
+const SUPABASE_URL      = 'https://wzclnjbzouqietbordxi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6Y2xuamJ6b3VxaWV0Ym9yZHhpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5Mjc4OTEsImV4cCI6MjA5MTUwMzg5MX0.g4OqfuhERKGq0Ttdb-PinPMVnOdvNucTTfJtM_cXZZk';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -26,36 +26,30 @@ export async function signOut() {
 }
 
 /**
- * Returns the current user from Supabase session OR localStorage.
- * The localStorage fallback covers demo/manual logins where no
- * real OAuth token exists, so auth.uid() would be null.
+ * Returns the current user from localStorage first, then Supabase session.
+ * localStorage covers demo/manual logins where no real OAuth token exists.
  */
-export async function getCurrentUser() { 
-  console.log("1. getCurrentUser started checking...");
-  
-  // First, check the browser's quick memory (Local Storage)
-  const stored = localStorage.getItem('stokvel_user'); 
-  if (stored) { 
-    try { 
-      const parsed = JSON.parse(stored); 
-      if (parsed?.id) {
-        console.log("2. Found user in LocalStorage!", parsed.name);
-        return { id: parsed.id, email: parsed.email }; 
+export async function getCurrentUser() {
+  try {
+    const stored = localStorage.getItem('stokvel_user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed && parsed.id) {
+        return { id: parsed.id, email: parsed.email };
       }
-    } catch (e) {
-      console.log("Error reading local user:", e);
-    } 
-  } 
-
-  console.log("3. No local user found, checking Supabase server...");
-  try { 
-    const { data: { user } } = await supabase.auth.getUser(); 
-    if (user) return user; 
+    }
   } catch (_) {
-    console.log("4. Supabase server check failed.");
-  } 
+    // Ignore corrupt localStorage data
+  }
 
-  return null; 
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return user;
+  } catch (err) {
+    console.warn('getCurrentUser: could not get Supabase session:', err.message);
+    return null;
+  }
 }
 
 export async function getMyRole() {
@@ -67,9 +61,15 @@ export async function getMyRole() {
 export function onAuthStateChange(callback) {
   supabase.auth.onAuthStateChange(async (event, session) => {
     if (event === 'SIGNED_IN' && session) {
-      const role    = await getMyRole();
-      const profile = await getProfile(session.user.id);
-      callback({ event, session, role, profile });
+      try {
+        const role    = await getMyRole();
+        const profile = await getProfile(session.user.id);
+        callback({ event, session, role, profile });
+      } catch (err) {
+        console.error('onAuthStateChange error:', err.message);
+        // Still call back so the UI can handle a partial sign-in
+        callback({ event, session, role: 'member', profile: null });
+      }
     } else if (event === 'SIGNED_OUT') {
       callback({ event, session: null, role: null, profile: null });
     }
@@ -80,7 +80,10 @@ export function onAuthStateChange(callback) {
 
 export async function getProfile(userId) {
   const { data, error } = await supabase
-    .from('profiles').select('*').eq('id', userId).single();
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
   if (error) throw error;
   return data;
 }
@@ -89,99 +92,97 @@ export async function getProfile(userId) {
 
 /**
  * Create a new stokvel group.
- * NOTE: 'frequency' must be lowercase to match the DB CHECK constraint:
+ * 'frequency' must be lowercase to match the DB CHECK constraint:
  *   ('weekly', 'bi-weekly', 'monthly')
- * NOTE: 'start_date' column does NOT exist in the groups table — omitted.
+ * 'start_date' column does NOT exist in the groups table — omitted.
  */
-export async function createGroup(groupData) { 
-  console.log("--- STARTING INSERT ---"); 
-  const user = await getCurrentUser(); 
-  
-  const cleanData = { 
-    name: String(groupData.name), 
-    description: String(groupData.description || ''), 
-    contribution_amount: Number(groupData.contributionAmount),
-    frequency: String(groupData.frequency).toLowerCase(),
-    max_members: 20, 
-    created_by: user.id 
+export async function createGroup(groupData) {
+  console.log('--- createGroup: starting ---');
+
+  const user = await getCurrentUser();
+  if (!user || !user.id) {
+    throw new Error('No authenticated user found. Please log in again.');
+  }
+
+  const cleanData = {
+    name:                String(groupData.name || 'Unnamed Group').trim(),
+    description:         String(groupData.description || '').trim(),
+    contribution_amount: Number(groupData.contributionAmount) || 0,
+    frequency:           String(groupData.frequency || 'monthly').toLowerCase(),
+    max_members:         Number(groupData.maxMembers) || 20,
+    created_by:          user.id,
   };
 
-  // We use .insert() and we DON'T use .select()
-  // This is the "fastest" way to send data
-  const { error } = await supabase
+  console.log('createGroup: sending to Supabase:', cleanData);
+
+  const { data, error } = await supabase
     .from('groups')
-    .insert([cleanData]);
+    .insert([cleanData])
+    .select()
+    .single();
 
   if (error) {
-    console.error("DATABASE ERROR:", error.message);
+    console.error('createGroup: DB error:', error.message);
     throw error;
   }
 
-  console.log("--- SUCCESS! ---");
-  return { success: true };
+  console.log('createGroup: success:', data);
+  return data;
 }
 
 /**
  * Fetch all groups this user created or belongs to.
  * Uses two separate queries to avoid the Supabase .or() foreign-table
- * limitation which causes errors when filtering on related tables.
+ * limitation when filtering on related tables.
  */
 export async function getMyGroups() {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  // Query 1: groups the user created
-  const { data: created, error: e1 } = await supabase
-    .from('groups')
-    .select('*, group_members(user_id)')
-    .eq('created_by', user.id)
-    .order('created_at', { ascending: false });
+  const [{ data: created, error: e1 }, { data: membership, error: e2 }] =
+    await Promise.all([
+      supabase
+        .from('groups')
+        .select('*, group_members(user_id)')
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('group_members')
+        .select('group_id, groups(*, group_members(user_id))')
+        .eq('user_id', user.id),
+    ]);
 
-  // Query 2: groups the user is a member of (but didn't create)
-  const { data: membership, error: e2 } = await supabase
-    .from('group_members')
-    .select('group_id, groups(*, group_members(user_id))')
-    .eq('user_id', user.id);
-
-  if (e1 && e2) throw e1; // both failed
+  if (e1 && e2) {
+    console.error('getMyGroups: both queries failed:', e1.message);
+    throw e1;
+  }
+  if (e1) console.warn('getMyGroups: created-groups query failed:', e1.message);
+  if (e2) console.warn('getMyGroups: membership query failed:', e2.message);
 
   const groups = [...(created || [])];
-
-  // Merge in member groups, avoiding duplicates
   const createdIds = new Set(groups.map(g => g.id));
+
   for (const row of (membership || [])) {
     if (row.groups && !createdIds.has(row.groups.id)) {
       groups.push(row.groups);
     }
   }
 
-  // Sort by created_at descending
   groups.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   return groups;
 }
 
 // ==================== INVITATIONS ====================
 
-export async function sendInvitation(groupId, email, role = 'member') {
+export async function sendInvitation(groupId, email) {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not logged in');
 
-  // Generate a unique token for the invite link
-  const token = crypto.randomUUID();
-
   const { data, error } = await supabase
     .from('invitations')
-    .insert({
-      group_id:   groupId,
-      email,
-      invited_by: user.id,
-      status:     'pending',
-      token,
-      role,
-    })
+    .insert({ group_id: groupId, email: email.toLowerCase().trim(), invited_by: user.id })
     .select()
     .single();
-
   if (error) throw error;
   return data;
 }
@@ -193,7 +194,7 @@ export async function getGroupInvitations(groupId) {
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return data;
+  return data ?? [];
 }
 
 export async function acceptInvitation(token) {
@@ -205,12 +206,16 @@ export async function acceptInvitation(token) {
 // ==================== CONTRIBUTIONS ====================
 
 export async function getMyContributions() {
+  const user = await getCurrentUser();
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from('contributions')
     .select('*, groups(name)')
+    .eq('user_id', user.id)
     .order('due_date', { ascending: false });
   if (error) throw error;
-  return data;
+  return data ?? [];
 }
 
 export async function recordContribution({ groupId, userId, amount, dueDate, status }) {
@@ -218,10 +223,10 @@ export async function recordContribution({ groupId, userId, amount, dueDate, sta
     .from('contributions')
     .insert({
       group_id: groupId,
-      user_id: userId,
-      amount,
+      user_id:  userId,
+      amount:   Number(amount),
       due_date: dueDate,
-      status: status || 'pending',
+      status:   status || 'pending',
     })
     .select()
     .single();

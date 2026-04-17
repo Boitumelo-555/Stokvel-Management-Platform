@@ -9,7 +9,7 @@ export function initLoginPage() {
       googleBtn.textContent = 'Signing in...';
       try {
         await signInWithGoogle();
-        // Supabase will redirect to Google, then back to your site
+        // Supabase redirects to Google, then back — handled by onAuthStateChange below
       } catch (err) {
         console.error('Sign-in failed:', err);
         googleBtn.disabled = false;
@@ -17,25 +17,26 @@ export function initLoginPage() {
       }
     });
   }
-}
 
-onAuthStateChange(({ event, session, role, profile }) => {
-  if (event === 'SIGNED_IN') {
-    localStorage.setItem('stokvel_user', JSON.stringify({
-      id: session.user.id,
-      name: profile?.full_name || session.user.user_metadata?.full_name || '',
-      email: session.user.email,
-      role: role || 'member',
-      avatar: (profile?.full_name || '??').split(' ').map(n => n[0]).join(''),
-    }));
+  // Only listen for auth state changes on the login page
+  onAuthStateChange(({ event, session, role, profile }) => {
+    if (event === 'SIGNED_IN') {
+      localStorage.setItem('stokvel_user', JSON.stringify({
+        id:     session.user.id,
+        name:   profile?.full_name || session.user.user_metadata?.full_name || '',
+        email:  session.user.email,
+        role:   role || 'member',
+        avatar: (profile?.full_name || '??').split(' ').map(n => n[0]).join(''),
+      }));
 
-    switch (role) {
-      case 'admin':     window.location.href = 'admin-dashboard.html'; break;
-      case 'treasurer': window.location.href = 'treasurer-dashboard.html'; break;
-      default:          window.location.href = 'member-dashboard.html'; break;
+      switch (role) {
+        case 'admin':     window.location.href = 'admin-dashboard.html';     break;
+        case 'treasurer': window.location.href = 'treasurer-dashboard.html'; break;
+        default:          window.location.href = 'member-dashboard.html';    break;
+      }
     }
-  }
-});
+  });
+}
 
 const NAV_LINKS = {
   admin: [
@@ -61,20 +62,23 @@ const NAV_LINKS = {
 export function checkAuth() {
   const user = JSON.parse(localStorage.getItem('stokvel_user') || 'null');
 
-  if (user) {
-    const userNameEl   = document.querySelector('.user-name');
-    const userRoleEl   = document.querySelector('.user-role');
-    const userAvatarEl = document.querySelector('.user-avatar');
-    if (userNameEl)   userNameEl.textContent   = user.name;
-    if (userRoleEl)   userRoleEl.textContent   = user.role.charAt(0).toUpperCase() + user.role.slice(1);
-    if (userAvatarEl) userAvatarEl.textContent = user.avatar;
+  // Redirect to login if not authenticated on a protected page
+  if (!user) {
+    window.location.href = 'index.html';
+    return;
   }
+
+  const userNameEl   = document.querySelector('.user-name');
+  const userRoleEl   = document.querySelector('.user-role');
+  const userAvatarEl = document.querySelector('.user-avatar');
+  if (userNameEl)   userNameEl.textContent   = user.name;
+  if (userRoleEl)   userRoleEl.textContent   = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+  if (userAvatarEl) userAvatarEl.textContent = user.avatar;
 
   const navSection = document.querySelector('.sidebar-nav .nav-section');
   if (!navSection) return;
 
-  const role = user ? user.role : 'admin';
-  const links = NAV_LINKS[role] || NAV_LINKS.admin;
+  const links = NAV_LINKS[user.role] || NAV_LINKS.member;
   const currentPage = window.location.pathname.split('/').pop() || 'index.html';
 
   navSection.innerHTML = `
@@ -92,6 +96,10 @@ export function checkAuth() {
 
 export function logout() {
   signOut().then(() => {
+    localStorage.removeItem('stokvel_user');
+    window.location.href = 'index.html';
+  }).catch(err => {
+    console.error('Logout error:', err);
     localStorage.removeItem('stokvel_user');
     window.location.href = 'index.html';
   });
