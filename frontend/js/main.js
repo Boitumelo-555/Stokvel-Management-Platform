@@ -4,7 +4,7 @@
 console.log("THE SWITCHBOARD IS AWAKE!");
 import { checkAuth, initLoginPage, logout } from './auth.js';
 import { initDashboard }         from './admin-dashboard.js';
-import { initTreasurerDashboard, initMemberDashboard } from './dashboards.js';
+import { initTreasurerDashboard, initMemberDashboard, initMyGroups } from './dashboards.js';
 import { initCreateGroup }       from './groups.js';
 import { initInviteMembers }     from './invites.js';
 import { initContributions }     from './contributions.js';
@@ -45,6 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
       break;
     case 'contributions.html':
       initContributions();
+      break;
+    case 'my-groups.html':
+    case 'my-groups':
+      initMyGroups();
       break;
   }
 });
