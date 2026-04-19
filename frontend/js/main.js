@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       initInviteMembers();
       break;
     case 'contributions.html':
+    case 'contributions':
       initContributions();
       break;
     case 'my-groups.html':
