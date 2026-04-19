@@ -36,8 +36,16 @@ export function initLoginPage() {
       if (pendingToken) {
         localStorage.removeItem('pending_invite_token');
         try {
-          await acceptInvitation(pendingToken);
+          const inviteResult = await acceptInvitation(pendingToken);
           console.log('Pending invitation accepted after login.');
+          // Role may have changed (e.g. invited as treasurer) — use the returned role
+          if (inviteResult?.role) {
+            role = inviteResult.role;
+            // Update localStorage with the new role
+            const stored = JSON.parse(localStorage.getItem('stokvel_user') || '{}');
+            stored.role = role;
+            localStorage.setItem('stokvel_user', JSON.stringify(stored));
+          }
         } catch (err) {
           console.warn('Could not accept pending invitation:', err.message);
           // Don't block login — just continue to dashboard
