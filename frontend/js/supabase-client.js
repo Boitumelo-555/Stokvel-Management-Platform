@@ -124,31 +124,19 @@ export async function getMyGroups() {
   const user = await getCurrentUser();
   if (!user) return [];
 
-  const [{ data: created, error: e1 }, { data: membership, error: e2 }] =
-    await Promise.all([
-      supabase
-        .from('groups')
-        .select('*, group_members(user_id)')
-        .eq('created_by', user.id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('group_members')
-        .select('group_id, groups(*, group_members(user_id))')
-        .eq('user_id', user.id),
-    ]);
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('groups(*, group_members(user_id))')
+    .eq('user_id', user.id);
 
-  if (e1 && e2) { console.error('getMyGroups: both queries failed:', e1.message); throw e1; }
-  if (e1) console.warn('getMyGroups: created-groups query failed:', e1.message);
-  if (e2) console.warn('getMyGroups: membership query failed:', e2.message);
-
-  const groups = [...(created || [])];
-  const createdIds = new Set(groups.map(g => g.id));
-  for (const row of (membership || [])) {
-    if (row.groups && !createdIds.has(row.groups.id)) groups.push(row.groups);
+  if (error) {
+    console.error('getMyGroups error:', error.message);
+    throw error;
   }
 
-  groups.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  return groups;
+  return (data ?? [])
+    .map(row => row.groups)
+    .filter(Boolean);
 }
 
 // ==================== INVITATIONS ====================
