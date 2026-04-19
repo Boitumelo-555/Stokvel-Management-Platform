@@ -13,7 +13,7 @@ const DUMMY_GROUPS = [
   { id: 'dummy-group-001', name: 'Family Savings Circle (Test)' },
 ];
 
-let _groups = [];
+let _groups=[];
 
 // Load EmailJS SDK once
 function loadEmailJS() {
