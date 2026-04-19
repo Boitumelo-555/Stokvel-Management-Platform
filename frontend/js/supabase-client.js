@@ -25,22 +25,14 @@ export async function signOut() {
   localStorage.removeItem('stokvel_user');
 }
 
-/**
- * Returns the current user from localStorage first, then Supabase session.
- * localStorage covers demo/manual logins where no real OAuth token exists.
- */
 export async function getCurrentUser() {
   try {
     const stored = localStorage.getItem('stokvel_user');
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed && parsed.id) {
-        return { id: parsed.id, email: parsed.email };
-      }
+      if (parsed?.id) return { id: parsed.id, email: parsed.email };
     }
-  } catch (_) {
-    // Ignore corrupt localStorage data
-  }
+  } catch (_) {}
 
   try {
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -67,7 +59,6 @@ export function onAuthStateChange(callback) {
         callback({ event, session, role, profile });
       } catch (err) {
         console.error('onAuthStateChange error:', err.message);
-        // Still call back so the UI can handle a partial sign-in
         callback({ event, session, role: 'member', profile: null });
       }
     } else if (event === 'SIGNED_OUT') {
@@ -90,19 +81,11 @@ export async function getProfile(userId) {
 
 // ==================== GROUPS ====================
 
-/**
- * Create a new stokvel group.
- * 'frequency' must be lowercase to match the DB CHECK constraint:
- *   ('weekly', 'bi-weekly', 'monthly')
- * 'start_date' column does NOT exist in the groups table — omitted.
- */
 export async function createGroup(groupData) {
   console.log('--- createGroup: starting ---');
 
   const user = await getCurrentUser();
-  if (!user || !user.id) {
-    throw new Error('No authenticated user found. Please log in again.');
-  }
+  if (!user?.id) throw new Error('No authenticated user found. Please log in again.');
 
   const cleanData = {
     name:                String(groupData.name || 'Unnamed Group').trim(),
@@ -126,15 +109,17 @@ export async function createGroup(groupData) {
     throw error;
   }
 
+  // Auto-add creator as a group member
+  const { error: memberError } = await supabase
+    .from('group_members')
+    .insert({ group_id: data.id, user_id: user.id });
+
+  if (memberError) console.warn('Could not add creator to group_members:', memberError.message);
+
   console.log('createGroup: success:', data);
   return data;
 }
 
-/**
- * Fetch all groups this user created or belongs to.
- * Uses two separate queries to avoid the Supabase .or() foreign-table
- * limitation when filtering on related tables.
- */
 export async function getMyGroups() {
   const user = await getCurrentUser();
   if (!user) return [];
@@ -152,20 +137,14 @@ export async function getMyGroups() {
         .eq('user_id', user.id),
     ]);
 
-  if (e1 && e2) {
-    console.error('getMyGroups: both queries failed:', e1.message);
-    throw e1;
-  }
+  if (e1 && e2) { console.error('getMyGroups: both queries failed:', e1.message); throw e1; }
   if (e1) console.warn('getMyGroups: created-groups query failed:', e1.message);
   if (e2) console.warn('getMyGroups: membership query failed:', e2.message);
 
   const groups = [...(created || [])];
   const createdIds = new Set(groups.map(g => g.id));
-
   for (const row of (membership || [])) {
-    if (row.groups && !createdIds.has(row.groups.id)) {
-      groups.push(row.groups);
-    }
+    if (row.groups && !createdIds.has(row.groups.id)) groups.push(row.groups);
   }
 
   groups.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -174,17 +153,31 @@ export async function getMyGroups() {
 
 // ==================== INVITATIONS ====================
 
-export async function sendInvitation(groupId, email) {
+/**
+ * Save an invitation to Supabase with a unique token, role and status.
+ * The token is used to build the accept link that gets emailed to the invitee.
+ */
+export async function sendInvitation(groupId, email, role = 'member') {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not logged in');
 
+  const token = crypto.randomUUID();
+
   const { data, error } = await supabase
     .from('invitations')
-    .insert({ group_id: groupId, email: email.toLowerCase().trim(), invited_by: user.id })
+    .insert({
+      group_id:   groupId,
+      email:      email.toLowerCase().trim(),
+      invited_by: user.id,
+      status:     'pending',
+      token,
+      role,
+    })
     .select()
     .single();
+
   if (error) throw error;
-  return data;
+  return data; // data.token is used by invites.js to build the accept link
 }
 
 export async function getGroupInvitations(groupId) {
@@ -197,6 +190,11 @@ export async function getGroupInvitations(groupId) {
   return data ?? [];
 }
 
+/**
+ * Called after login with a pending invite token,
+ * or directly from accept-invite.html when already logged in.
+ * Requires an `accept_invitation` stored procedure in Supabase.
+ */
 export async function acceptInvitation(token) {
   const { data, error } = await supabase.rpc('accept_invitation', { _token: token });
   if (error) throw error;
