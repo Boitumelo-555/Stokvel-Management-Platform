@@ -76,7 +76,7 @@ export async function initInviteMembers() {
       // 4. Get the inviter's name from localStorage / session
       const stored = localStorage.getItem('stokvel_user');
       const inviterName = stored
-        ? (JSON.parse(stored).full_name || JSON.parse(stored).email || 'A StokvelConnect Admin')
+        ? (JSON.parse(stored).name || JSON.parse(stored).email || 'A StokvelConnect Admin')
         : 'A StokvelConnect Admin';
 
       // 5. Send email via EmailJS
