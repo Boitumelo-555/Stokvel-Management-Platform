@@ -60,15 +60,10 @@
         const result = await supabase.rpc('accept_invitation', { _token: token });
         
         if (result.error) throw new Error(result.error.message);
-        
-        // Get the invitation to know which role was assigned
-        const { data: invitation } = await supabase
-          .from('invitations')
-          .select('role, group_id')
-          .eq('token', token)
-          .single();
-        
-        const role = invitation?.role || 'member';
+
+        // Role comes back in the RPC result — no second query needed
+        // (a second query would fail because RLS only allows admins/invitee by email)
+        const role = result.data?.role || 'member';
         
         statusDiv.innerHTML = `
           <h2>✓ Invitation Accepted!</h2>
