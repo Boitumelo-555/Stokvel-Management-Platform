@@ -1,5 +1,5 @@
 // ==================== AUTH ====================
-import { signInWithGoogle, signOut, onAuthStateChange } from './supabase-client.js';
+import { signInWithGoogle, signOut, onAuthStateChange, acceptInvitation } from './supabase-client.js';
 
 export function initLoginPage() {
   const googleBtn = document.getElementById('google-signin-btn');
@@ -18,17 +18,33 @@ export function initLoginPage() {
     });
   }
 
-  // Only listen for auth state changes on the login page
-  onAuthStateChange(({ event, session, role, profile }) => {
+  // Listen for auth state changes on the login page
+  onAuthStateChange(async ({ event, session, role, profile }) => {
     if (event === 'SIGNED_IN') {
+      // Save user to localStorage
       localStorage.setItem('stokvel_user', JSON.stringify({
         id:     session.user.id,
         name:   profile?.full_name || session.user.user_metadata?.full_name || '',
         email:  session.user.email,
         role:   role || 'member',
-        avatar: (profile?.full_name || '??').split(' ').map(n => n[0]).join(''),
+        avatar: (profile?.full_name || session.user.user_metadata?.full_name || '??')
+                  .split(' ').map(n => n[0]).join('').toUpperCase(),
       }));
 
+      // Check if there's a pending invite token to accept before redirecting
+      const pendingToken = localStorage.getItem('pending_invite_token');
+      if (pendingToken) {
+        localStorage.removeItem('pending_invite_token');
+        try {
+          await acceptInvitation(pendingToken);
+          console.log('Pending invitation accepted after login.');
+        } catch (err) {
+          console.warn('Could not accept pending invitation:', err.message);
+          // Don't block login — just continue to dashboard
+        }
+      }
+
+      // Redirect based on role
       switch (role) {
         case 'admin':     window.location.href = 'admin-dashboard.html';     break;
         case 'treasurer': window.location.href = 'treasurer-dashboard.html'; break;
@@ -62,7 +78,6 @@ const NAV_LINKS = {
 export function checkAuth() {
   const user = JSON.parse(localStorage.getItem('stokvel_user') || 'null');
 
-  // Redirect to login if not authenticated on a protected page
   if (!user) {
     window.location.href = 'index.html';
     return;
